@@ -1,0 +1,5 @@
+# PR 12 — node_exporter on Ubuntu hosts (port 9100)
+
+- name: Install node_exporter
+  ansible.builtin.import_role:
+    name: prometheus.prometheus.node_exporter
