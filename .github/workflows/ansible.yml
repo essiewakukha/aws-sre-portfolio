@@ -1,0 +1,41 @@
+name: ansible
+
+on:
+  workflow_call:
+    inputs:
+      app_tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      app_tag:
+        description: "Image tag (commit SHA) to deploy"
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    defaults:
+      run:
+        working-directory: ansible
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+      - name: Install Session Manager plugin
+        run: |
+          curl -sSo /tmp/smp.deb "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb"
+          sudo dpkg -i /tmp/smp.deb
+      - run: pip install ansible-core boto3 botocore
+      - run: ansible-galaxy collection install -r requirements.yml
+      - run: >
+          ansible-playbook -i inventory site.yml
+          -e app_tag=${{ inputs.app_tag }}
+          -e git_sha=${{ github.sha }}
