@@ -1,0 +1,7 @@
+# Make these yours: title, name, theme and project list.
+site_title: "My Cloud Engineering Portfolio"
+owner_name: "Your Name"
+theme_colour: "#0f766e"
+projects:
+  - name: AWS SRE Portfolio
+    stack: [Terraform, Ansible, Docker, Datadog, Prometheus]
