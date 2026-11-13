@@ -1,0 +1,14 @@
+# PR 12 — Prometheus + Grafana on mon-1 with Docker Compose
+#
+# TODO
+# 1. Install Docker Engine (reuse tasks from docker_app or move them into a shared "docker" role)
+# 2. Copy templates/prometheus.yml.j2 -> /opt/monitoring/prometheus.yml
+# 3. Copy files/grafana/provisioning -> /opt/monitoring/grafana/provisioning
+# 4. Template docker-compose.yml (prometheus:9090, grafana:3000, named volumes)
+# 5. community.docker.docker_compose_v2: project_src /opt/monitoring
+#
+# Reach Grafana:  aws ssm start-session --target <mon-1-id> \
+#   --document-name AWS-StartPortForwardingSession \
+#   --parameters '{"portNumber":["3000"],"localPortNumber":["3000"]}'
+
+[] # empty until this PR is implemented

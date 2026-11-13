@@ -1,0 +1,33 @@
+global:
+  scrape_interval: 30s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: linux
+    ec2_sd_configs:
+      - region: us-east-1
+        port: 9100
+        filters:
+          - name: "tag:Project"
+            values: ["{{ project_tag }}"]
+          - name: "tag:Role"
+            values: ["web", "monitoring"]
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Name]
+        target_label: instance
+
+  - job_name: windows
+    ec2_sd_configs:
+      - region: us-east-1
+        port: 9182
+        filters:
+          - name: "tag:Project"
+            values: ["{{ project_tag }}"]
+          - name: "tag:Role"
+            values: ["windows"]
+    relabel_configs:
+      - source_labels: [__meta_ec2_tag_Name]
+        target_label: instance

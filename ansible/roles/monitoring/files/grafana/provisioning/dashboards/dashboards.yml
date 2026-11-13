@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: portfolio
+    folder: SRE Portfolio
+    type: file
+    options:
+      path: /etc/grafana/provisioning/dashboards
+# TODO: save Node Exporter Full (grafana.com ID 1860) and a windows_exporter
+# dashboard as JSON files next to this one.
