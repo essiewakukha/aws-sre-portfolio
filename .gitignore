@@ -1,0 +1,30 @@
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+*.tfvars
+!*.tfvars.example
+override.tf
+override.tf.json
+
+# Secrets
+.env
+*.pem
+*.key
+vault-pass*
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python / Ansible
+__pycache__/
+*.retry
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
