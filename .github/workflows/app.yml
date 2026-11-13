@@ -1,0 +1,52 @@
+name: app
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**"]
+  pull_request:
+    paths: ["app/**"]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO_NAME: sre-portfolio-api
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci && npm test
+        working-directory: app
+      - run: docker build -t app:${{ github.sha }} app
+      # TODO (PR 9): Trivy image scan, fail on CRITICAL
+      - if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - if: github.event_name == 'push'
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - if: github.event_name == 'push'
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPO_NAME }}:${{ github.sha }}
+          docker tag app:${{ github.sha }} "$IMAGE"
+          docker push "$IMAGE"
+
+  deploy:
+    if: github.event_name == 'push'
+    needs: build
+    uses: ./.github/workflows/ansible.yml
+    with:
+      app_tag: ${{ needs.build.outputs.tag }}
+    secrets: inherit
