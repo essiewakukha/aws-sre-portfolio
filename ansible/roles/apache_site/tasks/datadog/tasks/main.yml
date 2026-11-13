@@ -1,0 +1,15 @@
+# PR 10 — Datadog Agent on Ubuntu and Windows via the official collection.
+
+- name: Install and configure the Datadog Agent
+  ansible.builtin.import_role:
+    name: datadog.dd.agent
+  vars:
+    datadog_api_key: "{{ lookup('amazon.aws.aws_ssm', '/sre-portfolio/datadog_api_key', region='us-east-1') }}"
+    datadog_site: datadoghq.com # or datadoghq.eu - match your account
+    datadog_config:
+      tags:
+        - "env:dev"
+        - "project:{{ project_tag }}"
+        - "os:{{ ansible_os_family | lower }}"
+      logs_enabled: true
+    # TODO: on role_web add datadog_checks for apache (/server-status) and Docker

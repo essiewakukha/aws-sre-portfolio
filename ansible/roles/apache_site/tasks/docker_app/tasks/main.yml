@@ -1,0 +1,14 @@
+# PR 8 — Docker app stack (Nginx + Node.js + PostgreSQL)
+#
+# TODO
+# 1. Install Docker Engine + compose plugin from Docker's apt repo (not Ubuntu's docker.io)
+# 2. Log in to ECR (aws ecr get-login-password | docker login ...)
+# 3. Read DB password from SSM Parameter Store:
+#      db_password: "{{ lookup('amazon.aws.aws_ssm', '/sre-portfolio/db_password', region='us-east-1') }}"
+# 4. Template docker-compose.yml.j2, nginx.conf and .env.j2 into /opt/app
+# 5. community.docker.docker_compose_v2:
+#      project_src: /opt/app
+#      pull: always
+#      state: present
+
+[] # empty until this PR is implemented
