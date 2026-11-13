@@ -1,0 +1,9 @@
+collections:
+  - name: amazon.aws
+  - name: community.aws
+  - name: community.general
+  - name: ansible.windows
+  - name: community.windows
+  - name: community.docker
+  - name: datadog.dd
+  - name: prometheus.prometheus

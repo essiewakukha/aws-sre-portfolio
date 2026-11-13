@@ -1,0 +1,13 @@
+plugin: amazon.aws.aws_ec2
+regions:
+  - us-east-1
+filters:
+  tag:Project: aws-sre-portfolio
+  instance-state-name: running
+hostnames:
+  - instance-id
+keyed_groups:
+  - key: tags.Role
+    prefix: role # -> role_web, role_windows, role_monitoring
+compose:
+  ansible_host: instance_id
