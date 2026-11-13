@@ -1,0 +1,16 @@
+<VirtualHost *:80>
+    ServerName {{ ansible_hostname }}
+    DocumentRoot /var/www/html
+
+    # Short cache so refreshing through CloudFront shows both servers
+    Header set Cache-Control "max-age=5"
+
+    # Local-only status page for the Datadog Apache check (PR 10)
+    <Location "/server-status">
+        SetHandler server-status
+        Require local
+    </Location>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
