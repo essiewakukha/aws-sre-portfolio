@@ -1,0 +1,29 @@
+# Each play is added in its own PR (see docs/PR_PLAN.md).
+
+- name: Web servers - Apache site and Docker app
+  hosts: role_web
+  become: true
+  pre_tasks:
+    - name: Gather EC2 metadata (instance ID, AZ) for templates
+      amazon.aws.ec2_metadata_facts:
+  roles:
+    - { role: apache_site, tags: [apache] }          # PR 7
+    - { role: docker_app, tags: [app] }              # PR 8
+    - { role: node_exporter, tags: [prometheus] }    # PR 12
+
+- name: Windows servers - exporters
+  hosts: role_windows
+  roles:
+    - { role: windows_exporter, tags: [prometheus] } # PR 12
+
+- name: Monitoring host - Prometheus and Grafana
+  hosts: role_monitoring
+  become: true
+  roles:
+    - { role: node_exporter, tags: [prometheus] }    # PR 12
+    - { role: monitoring, tags: [prometheus] }       # PR 12
+
+- name: Datadog agent on every host
+  hosts: role_web:role_windows:role_monitoring
+  roles:
+    - { role: datadog, tags: [datadog] }             # PR 10

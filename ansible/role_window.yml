@@ -1,0 +1,2 @@
+ansible_shell_type: powershell
+# Never use become on Windows hosts with the Datadog role
