@@ -30,20 +30,77 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform fmt -check -recursive ../..
-      - run: terraform init -input=false
-      - run: terraform validate
-      # TODO (PR 2): add tflint and a config scan (Checkov or Trivy)
-      - id: plan
-        run: terraform plan -input=false -no-color -out tfplan
-      # TODO (PR 2): post the plan output as a PR comment (actions/github-script)
 
-  # PR 6: apply on merge, gated by the "dev" environment (required reviewer = you)
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Format check
+        run: terraform fmt -check -recursive ../..
+
+      - name: Init and validate
+        run: |
+          terraform init -input=false
+          terraform validate -no-color
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: TFLint
+        run: tflint --init && tflint --recursive --chdir=../..
+
+      - name: Checkov security scan
+        run: |
+          pip install --quiet checkov
+          checkov -d ../.. --framework terraform --quiet --soft-fail
+
+      - name: Plan
+        run: |
+          terraform plan -input=false -no-color -out tfplan
+          terraform show -no-color tfplan > plan.txt
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PLAN_FILE: ${{ env.TF_DIR }}/plan.txt
+        with:
+          script: |
+            const fs = require('fs');
+            let plan = fs.readFileSync(process.env.PLAN_FILE, 'utf8');
+            if (plan.length > 60000) {
+              plan = plan.slice(0, 60000) + '\n... (truncated)';
+            }
+            const marker = '<!-- terraform-plan -->';
+            const fence = '```';
+            const body = [
+              marker,
+              '### Terraform plan: ' + process.env.TF_DIR,
+              '<details><summary>Show plan</summary>',
+              '',
+              fence + 'hcl',
+              plan,
+              fence,
+              '</details>'
+            ].join('\n');
+
+            const params = { owner: context.repo.owner, repo: context.repo.repo };
+            const { data: comments } = await github.rest.issues.listComments({
+              ...params, issue_number: context.issue.number
+            });
+            const old = comments.find(c => c.body && c.body.includes(marker));
+            if (old) {
+              await github.rest.issues.updateComment({ ...params, comment_id: old.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: context.issue.number, body });
+            }
+
+  # Apply on merge to main, gated by the "dev" environment (you approve or reject)
   apply:
     if: github.event_name == 'push' || inputs.action == 'apply'
     needs: plan
@@ -54,14 +111,21 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform init -input=false
-      - run: terraform apply -input=false -auto-approve
 
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Apply
+        run: terraform apply -input=false -auto-approve
+
+  # Manual teardown: Actions tab -> terraform -> Run workflow -> action = destroy
   destroy:
     if: inputs.action == 'destroy'
     runs-on: ubuntu-latest
@@ -71,10 +135,16 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+
       - uses: hashicorp/setup-terraform@v3
-      - run: terraform init -input=false
-      - run: terraform destroy -input=false -auto-approve
+
+      - name: Init
+        run: terraform init -input=false
+
+      - name: Destroy
+        run: terraform destroy -input=false -auto-approve
