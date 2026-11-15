@@ -28,7 +28,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.TF_DIR }}
-        steps:
+    steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -74,9 +74,3 @@ jobs:
               owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
             const old = comments.find(c => c.body.includes(marker));
             if (old) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner, repo: context.repo.repo, comment_id: old.id, body });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
-            }
