@@ -6,7 +6,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket       = "<yourname>-sre-portfolio-tfstate" # TODO: from bootstrap output
+    bucket       = "esther-sre-portfolio-tfstate-2026" # TODO: from bootstrap output
     key          = "dev/terraform.tfstate"
     region       = "us-east-1"
     use_lockfile = true
