@@ -6,7 +6,7 @@ terraform {
     datadog = { source = "DataDog/datadog", version = "~> 3.0" }
   }
   backend "s3" {
-    bucket       = "<yourname>-sre-portfolio-tfstate" # TODO
+    bucket       = "esther-sre-portfolio-tfstate-2026" # TODO
     key          = "datadog/terraform.tfstate"
     region       = "us-east-1"
     use_lockfile = true
