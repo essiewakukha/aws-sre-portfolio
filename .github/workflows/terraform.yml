@@ -28,53 +28,55 @@ jobs:
     defaults:
       run:
         working-directory: ${{ env.TF_DIR }}
-    steps:
+        steps:
       - uses: actions/checkout@v4
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
       - uses: hashicorp/setup-terraform@v3
-      - run: terraform fmt -check -recursive ../..
-      - run: terraform init -input=false
-      - run: terraform validate
-      # TODO (PR 2): add tflint and a config scan (Checkov or Trivy)
-      - id: plan
-        run: terraform plan -input=false -no-color -out tfplan
-      # TODO (PR 2): post the plan output as a PR comment (actions/github-script)
+        with:
+          terraform_wrapper: false
 
-  # PR 6: apply on merge, gated by the "dev" environment (required reviewer = you)
-  apply:
-    if: github.event_name == 'push' || inputs.action == 'apply'
-    needs: plan
-    runs-on: ubuntu-latest
-    environment: dev
-    defaults:
-      run:
-        working-directory: ${{ env.TF_DIR }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform init -input=false
-      - run: terraform apply -input=false -auto-approve
+      - name: Format check
+        run: terraform fmt -check -recursive ../..
 
-  destroy:
-    if: inputs.action == 'destroy'
-    runs-on: ubuntu-latest
-    environment: dev
-    defaults:
-      run:
-        working-directory: ${{ env.TF_DIR }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Init and validate
+        run: |
+          terraform init -input=false
+          terraform validate -no-color
+
+      - name: TFLint
+        uses: terraform-linters/setup-tflint@v4
+      - run: tflint --init && tflint --recursive --chdir=../..
+
+      - name: Checkov security scan
+        run: |
+          pip install --quiet checkov
+          checkov -d ../.. --framework terraform --quiet --soft-fail
+
+      - name: Plan
+        run: |
+          terraform plan -input=false -no-color -out tfplan
+          terraform show -no-color tfplan > plan.txt
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-      - uses: hashicorp/setup-terraform@v3
-      - run: terraform init -input=false
-      - run: terraform destroy -input=false -auto-approve
+          script: |
+            const fs = require('fs');
+            let plan = fs.readFileSync('${{ env.TF_DIR }}/plan.txt', 'utf8');
+            if (plan.length > 60000) plan = plan.slice(0, 60000) + '\n... (truncated)';
+            const marker = '<!-- terraform-plan -->';
+            const body = `${marker}\n### Terraform plan: \`${{ env.TF_DIR }}\`\n<details><summary>Show plan</summary>\n\n\`\`\`hcl\n${plan}\n\`\`\`\n</details>`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
+            const old = comments.find(c => c.body.includes(marker));
+            if (old) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo, comment_id: old.id, body });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }
